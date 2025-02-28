@@ -1,9 +1,10 @@
 {
   "name": "pintek-restapi",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server.js",
     "generate:main": "npx prisma generate --schema=./prisma/main_db.prisma"
   },
   "keywords": [],
@@ -11,9 +12,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@hapi/hapi": "^21.3.12",
     "@prisma/client": "^6.4.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "prisma": "^6.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   }
 }
