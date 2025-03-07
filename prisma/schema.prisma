@@ -21,14 +21,38 @@ model News {
   author    User     @relation(fields: [authorId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  imagePath String?
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  news      News[]   // Relasi dengan News
+  id             Int              @id @default(autoincrement())
+  username       String           @unique
+  email          String           @unique
+  password       String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  news           News[]
+  Authentication Authentication[]
+}
+
+model StrukturOrganisasi {
+  id           Int      @id @default(autoincrement())
+  nama         String
+  jabatan      String
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Authentication {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  accessToken  String   @unique
+  refreshToken String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

@@ -1,54 +1,71 @@
-// services/userService.js
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
+const NotFoundError = require('../exceptions/NotFoundError');
+const ValidationError = require('../exceptions/ValidationError');
+const AuthenticationError = require('../exceptions/AuthenticationError');
 
-const getAllUsers = async (request, h) => {
-  try {
-    const users = await prisma.user.findMany();
-    return users;
-  } catch (err) {
-    console.error(err);
-    return h.response('Internal Server Error').code(500);
-  }
-};
-
-const getUserById = async (request, h) => {
-  const { id } = request.params;
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: parseInt(id) },
-    });
+class UserService {
+  async getUserByUsernameOrEmail(identifier) {
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: identifier },
+          { email: identifier },
+        ],
+      },
+    })
 
     if (!user) {
-      return h.response('User Not Found').code(404);
+      throw new NotFoundError('User not found');
     }
 
     return user;
-  } catch (err) {
-    console.error(err);
-    return h.response('Internal Server Error').code(500);
   }
-};
 
-const createUser = async (request, h) => {
-  const { username, email, password } = request.payload;
-  try {
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        email,
-        password,
-      },
-    });
-    return h.response(newUser).code(201); // Kode status 201 untuk user baru
-  } catch (err) {
-    console.error(err);
-    return h.response('Internal Server Error').code(500);
+  async createUser(username, email, hashedPassword) {
+    try {
+      const user = await prisma.user.create({
+        data: {
+          username,
+          email,
+          password: hashedPassword,
+        },
+      });
+      return user;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ValidationError('Username or Email already exists');
+      }
+      throw error;
+    }
   }
-};
 
-module.exports = {
-  getAllUsers,
-  getUserById,
-  createUser,
-};
+  async verifyUser(identifier, password) {
+    const user = await this.getUserByUsernameOrEmail(identifier);
+    const passwordIsValid = await bcrypt.compare(password, user.password);
+
+    if (!passwordIsValid) {
+      throw new AuthenticationError('Invalid username/email or password');
+    }
+
+    return user;
+  }
+
+  async verifyUserCredentials(identifier, password) {
+    try {
+      const user = await this.getUserByUsernameOrEmail(identifier);
+      const passwordIsValid = await bcrypt.compare(password, user.password);
+
+      if (!passwordIsValid) {
+        throw new AuthenticationError('Invalid credentials');
+      }
+
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+module.exports = UserService;
