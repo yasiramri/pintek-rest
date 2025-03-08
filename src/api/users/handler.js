@@ -1,55 +1,83 @@
 // handler.js
-const UserService = require('./userService');
 const Jwt = require('@hapi/jwt');
 const bcrypt = require('bcrypt');
-const ValidationError = require('../exceptions/ValidationError');
+const ClientError = require('../../exceptions/ClientError');
+const NotFoundError = require('../../exceptions/NotFoundError');
 
 class UserHandler {
-  constructor() {
-    this._service = new UserService();
+  constructor(service, validator) {
+    this._service = service;
+    this._validator = validator;
+
+    this.postUserHandler = this.postUserHandler.bind(this);
+    this.getUserByIdHandler = this.getUserByIdHandler.bind(this);
   }
 
-  async register(request, h) {
-    const { username, email, password } = request.payload;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+  async postUserHandler(request, h) {
     try {
-      const user = await this._service.createUser(username, email, hashedPassword);
-      return h.response({ id: user.id, username: user.username, email: user.email }).code(201);
+      this._validator.validateUserPayload(request.payload);
+      const { username, password, email } = request.payload;
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await this._service.addUser(username, email, hashedPassword);
+
+      return h
+        .response({
+          status: 'success',
+          message: 'User berhasil ditambahkan',
+          data: {
+            userId: user.id,
+          },
+        })
+        .code(201);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        return h.response({ message: error.message }).code(error.statusCode);
+      if (error instanceof ClientError) {
+        return h
+          .response({
+            status: 'fail',
+            message: error.message,
+          })
+          .code(400);
       }
-      return h.response({ message: 'Internal Server Error' }).code(500);
+
+      console.error(error); // Log error untuk debugging
+      return h
+        .response({
+          status: 'error',
+          message: 'Terjadi kesalahan pada server',
+        })
+        .code(500);
     }
   }
 
-  async login(request, h) {
-    const { identifier, password } = request.payload;
-
+  async getUserByIdHandler(request, h) {
     try {
-      const user = await this._service.verifyUser(identifier, password, bcrypt);
+      const { id } = request.params;
+      const user = await this._service.getUserById(id);
 
-      const token = Jwt.token.generate(
-        {
-          userId: user.id,
-          username: user.username,
-        },
-        {
-          key: 'your_jwt_secret_here',
-          algorithm: 'HS256',
-        },
-        {
-          ttlSec: 3600,
-        }
-      );
-
-      return h.response({ token }).code(200);
+      return h
+        .response({
+          status: 'success',
+          data: { user },
+        })
+        .code(200);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        return h.response({ message: error.message }).code(error.statusCode);
+      if (error instanceof NotFoundError) {
+        return h
+          .response({
+            status: 'fail',
+            message: error.message,
+          })
+          .code(404);
       }
-      return h.response({ message: 'Internal Server Error' }).code(500);
+
+      console.error(error); // Logging error untuk debugging
+      return h
+        .response({
+          status: 'error',
+          message: 'Terjadi kesalahan pada server',
+        })
+        .code(500);
     }
   }
 }

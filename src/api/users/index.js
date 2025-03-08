@@ -1,12 +1,11 @@
-// index.js
-const UserHandler = require('./handler');
+const UsersHandler = require('./handler');
 const routes = require('./routes');
 
 module.exports = {
-  name: 'userAuth',
+  name: 'users',
   version: '1.0.0',
-  register: async (server) => {
-    const userHandler = new UserHandler();
-    server.route(routes(userHandler));
+  register: async (server, { service, validator }) => {
+    const usersHandler = new UsersHandler(service, validator);
+    server.route(routes(usersHandler));
   },
 };

@@ -6,32 +6,47 @@ const path = require('path');
 const winston = require('winston');
 const HapiRateLimit = require('hapi-rate-limit');
 
-const newsPlugin = require('./api/news');
-const authenticationPlugin = require('./api/auth');
-const NewsService = require('./services/newsService');
-const AuthenticationService = require('./services/authenticationService');
-const UserService = require('./services/userService');
-const TokenManager = require('./token/tokenManager');
-const validator = require('./validators/auth');
 const ClientError = require('./exceptions/ClientError');
-const ValidationError = require('./exceptions/ValidationError');
 const { PrismaClient } = require('@prisma/client');
+
+// news
+const news = require('./api/news');
+const NewsService = require('./services/newsService');
+const NewsValidator = require('./validators/news');
+
+// user
+const users = require('./api/users');
+const UsersService = require('./services/userService');
+const UsersValidator = require('./validators/users');
+
+// authentications
+const authentications = require('./api/auth');
+const AuthenticationsService = require('./services/authenticationService');
+const TokenManager = require('./tokenize/TokenManager');
+const AuthenticationsValidator = require('./validators/auth');
 
 const prisma = new PrismaClient();
 
-// Konfigurasi logger menggunakan Winston
 const logger = winston.createLogger({
   level: 'error',
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.json()
+    winston.format.printf(({ timestamp, level, message, stack }) => {
+      return `${timestamp} [${level.toUpperCase()}]: ${stack || message}`;
+    })
   ),
   transports: [
-    new winston.transports.File({ filename: 'logs/error.log' }),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }), // Simpan ke file
+    new winston.transports.Console(), // Pastikan ini aktif untuk log ke terminal
   ],
 });
 
+
 const init = async () => {
+  const newsService = new NewsService();
+  const usersService = new UsersService();
+  const authenticationsService = new AuthenticationsService();
+
   const server = Hapi.server({
     port: process.env.PORT || 3000,
     host: process.env.HOST || 'localhost',
@@ -42,41 +57,48 @@ const init = async () => {
     },
   });
 
-  await server.register([Inert, Jwt, HapiRateLimit]);
+  await server.register([Inert, Jwt]);
 
   // Konfigurasi autentikasi JWT
-  server.auth.strategy('jwt', 'jwt', {
+  server.auth.strategy('news_jwt', 'jwt', {
     keys: process.env.ACCESS_TOKEN_SECRET,
     verify: {
       aud: false,
       iss: false,
       sub: false,
-      maxAgeSec: 3600, // Token berlaku selama 1 jam
+      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
     },
     validate: (artifacts) => ({
       isValid: true,
-      credentials: { userId: artifacts.decoded.payload.userId },
+      credentials: {
+        id: artifacts.decoded.payload.id,
+      },
     }),
   });
 
-  server.auth.default('jwt');
-
-  // Mendaftarkan plugin untuk news dan authentication
+  // Mendaftarkan plugin
   await server.register([
     {
-      plugin: newsPlugin,
+      plugin: news,
       options: {
-        service: new NewsService(),
-        validator: {},
+        service: newsService,
+        validator: NewsValidator,
       },
     },
     {
-      plugin: authenticationPlugin,
+      plugin: users,
       options: {
-        authenticationService: new AuthenticationService(),
-        userService: new UserService(),
+        service: usersService,
+        validator: UsersValidator,
+      },
+    },
+    {
+      plugin: authentications,
+      options: {
+        authenticationsService,
+        usersService,
         tokenManager: TokenManager,
-        validator,
+        validator: AuthenticationsValidator,
       },
     },
   ]);
@@ -85,46 +107,9 @@ const init = async () => {
   await server.register({
     plugin: HapiRateLimit,
     options: {
-      userLimit: 100, // Maksimal 100 request per IP
-      pathLimit: 50, // Maksimal 50 request per endpoint
-      headers: false,
-    },
-  });
-
-  // Middleware global untuk menangani error
-  server.ext('onPreResponse', (request, h) => {
-    const response = request.response;
-
-    if (response instanceof Error) {
-      logger.error({ message: response.message, stack: response.stack });
-
-      if (response instanceof ClientError) {
-        return h
-          .response({ message: response.message })
-          .code(response.statusCode);
-      }
-
-      if (response instanceof ValidationError) {
-        return h
-          .response({ message: response.message })
-          .code(response.statusCode);
-      }
-
-      return h.response({ message: 'Internal Server Error' }).code(500);
-    }
-
-    return h.continue;
-  });
-
-  // Endpoint untuk menampilkan gambar yang diunggah
-  server.route({
-    method: 'GET',
-    path: '/uploads/newsImages/{filename}',
-    handler: {
-      directory: {
-        path: path.join(__dirname, 'src/uploads/newsImages'),
-        listing: false,
-      },
+      userLimit: 500, // Maksimal 500 request per IP per jam
+      pathLimit: 200, // Maksimal 200 request per endpoint per jam
+      headers: true, // Berikan informasi batas ke pengguna
     },
   });
 
@@ -132,11 +117,14 @@ const init = async () => {
   console.log('Server running on %s', server.info.uri);
 
   // Graceful shutdown untuk menutup koneksi Prisma saat server dihentikan
-  process.on('SIGINT', async () => {
+  const gracefulShutdown = async () => {
     console.log('Shutting down server...');
     await prisma.$disconnect();
     process.exit(0);
-  });
+  };
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
 };
 
 init();

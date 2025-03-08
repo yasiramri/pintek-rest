@@ -1,3 +1,5 @@
+const auth = require('../auth');
+
 const routes = (handler) => [
   {
     method: 'GET',
@@ -26,9 +28,10 @@ const routes = (handler) => [
       payload: {
         allow: 'multipart/form-data',
         multipart: { output: 'stream' },
-        maxBytes: 10485760, // 10MB (sesuai kebutuhan)
+        maxBytes: 10485760, // 10MB
       },
       handler: handler.createNews.bind(handler),
+      auth: 'news_jwt',
     },
   },
   {
@@ -41,6 +44,20 @@ const routes = (handler) => [
         maxBytes: 10485760,
       },
       handler: handler.uploadImage.bind(handler),
+      auth: 'news_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/uploads/newsImages/{filename}',
+    handler: {
+      directory: {
+        path: './src/uploads/newsImages',
+        listing: true, // Biarkan true jika ingin melihat daftar file di browser
+      },
+    },
+    options: {
+      auth: false, // Tidak memerlukan autentikasi untuk melihat gambar
     },
   },
 ];

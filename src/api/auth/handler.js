@@ -1,79 +1,84 @@
 const ClientError = require('../../exceptions/ClientError');
 
-class AuthenticationHandler {
-  constructor(authenticationService, userService, tokenManager, validator) {
-    this._authenticationService = authenticationService;
-    this._userService = userService;
+class AuthenticationsHandler {
+  constructor(authenticationsService, usersService, tokenManager, validator) {
+    this._authenticationsService = authenticationsService;
+    this._usersService = usersService;
     this._tokenManager = tokenManager;
     this._validator = validator;
+
+    this.postAuthenticationHandler = this.postAuthenticationHandler.bind(this);
+    this.putAuthenticationHandler = this.putAuthenticationHandler.bind(this);
+    this.deleteAuthenticationHandler =
+      this.deleteAuthenticationHandler.bind(this);
   }
 
-  async postAuthentication(request, h) {
-    const { error } = this._validator.validatePostAuthentication(
-      request.payload
-    );
-    if (error) {
-      throw new ClientError(error.details.map((d) => d.message).join(', '));
+  async postAuthenticationHandler(request, h) {
+    try {
+      this._validator.validatePostAuthentication(request.payload);
+      console.log('Payload validated:', request.payload);
+
+      const { identifier, password } = request.payload;
+      const user = await this._usersService.verifyUserCredentials(
+        identifier,
+        password
+      );
+      console.log('User found:', user);
+
+      const accessToken = this._tokenManager.generateAccessToken({
+        id: user.id,
+      });
+      const refreshToken = this._tokenManager.generateRefreshToken({
+        id: user.id,
+      });
+      console.log('Tokens generated:', { accessToken, refreshToken });
+
+      await this._authenticationsService.addRefreshToken(refreshToken);
+      console.log('Refresh token stored in DB');
+
+      return h
+        .response({
+          status: 'success',
+          message: 'Authentication berhasil ditambahkan',
+          data: { accessToken, refreshToken },
+        })
+        .code(201);
+    } catch (error) {
+      console.error('Error in postAuthenticationHandler:', error);
+      logger.error('Error in postAuthenticationHandler:', error);
+      throw error;
     }
-
-    const { identifier, password } = request.payload;
-    const user = await this._userService.verifyUserCredentials(
-      identifier,
-      password
-    );
-    const accessToken = this._tokenManager.generateAccessToken({
-      userId: user.id,
-      username: user.username,
-    });
-    const refreshToken = this._tokenManager.generateRefreshToken({
-      userId: user.id,
-      username: user.username,
-    });
-
-    await this._authenticationService.addAuthentication(
-      user.id,
-      accessToken,
-      refreshToken
-    );
-    return h.response({ accessToken, refreshToken }).code(201);
   }
 
-  async putAuthentication(request, h) {
-    const { error } = this._validator.validatePutAuthentication(
-      request.payload
-    );
-    if (error) {
-      throw new ClientError(error.details.map((d) => d.message).join(', '));
-    }
+  async putAuthenticationHandler(request, h) {
+    this._validator.validatePutAuthenticationPayload(request.payload);
 
     const { refreshToken } = request.payload;
-    await this._authenticationService.verifyRefreshToken(refreshToken);
-    const { userId, username } =
-      this._tokenManager.verifyRefreshToken(refreshToken);
-    const newAccessToken = this._tokenManager.generateAccessToken({
-      userId,
-      username,
-    });
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
+    const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
 
-    await this._authenticationService.updateAccessToken(
-      refreshToken,
-      newAccessToken
-    );
-    return h.response({ accessToken: newAccessToken }).code(200);
+    const accessToken = this._tokenManager.generateAccessToken({ id });
+    return {
+      status: 'success',
+      message: 'Access Token berhasil diperbarui',
+      data: {
+        accessToken,
+      },
+    };
   }
 
-  async deleteAuthentication(request, h) {
-    const { error } = this._validator.validateDeleteAuthentication(
-      request.payload
-    );
-    if (error) {
-      throw new ClientError(error.details.map((d) => d.message).join(', '));
-    }
+  async deleteAuthenticationHandler(request, h) {
+    this._validator.validateDeleteAuthenticationPayload(request.payload);
 
     const { refreshToken } = request.payload;
-    await this._authenticationService.deleteAuthentication(refreshToken);
-    return h.response({ message: 'Refresh token deleted' }).code(200);
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
+    await this._authenticationsService.deleteRefreshToken(refreshToken);
+
+    return {
+      status: 'success',
+      message: 'Refresh token berhasil dihapus',
+    };
   }
 }
 
-module.exports = AuthenticationHandler;
+module.exports = AuthenticationsHandler;

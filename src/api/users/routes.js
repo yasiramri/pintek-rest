@@ -1,15 +1,13 @@
 const routes = (handler) => [
   {
     method: 'POST',
-    path: '/register',
-    options: { auth: false },
-    handler: handler.register.bind(handler),
+    path: '/users',
+    handler: handler.postUserHandler,
   },
   {
-    method: 'POST',
-    path: '/login',
-    options: { auth: false },
-    handler: handler.login.bind(handler),
+    method: 'GET',
+    path: '/users/{id}',
+    handler: handler.getUserByIdHandler,
   },
 ];
 

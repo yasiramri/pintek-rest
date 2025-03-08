@@ -50,10 +50,9 @@ class NewsHandler {
     }
   }
 
-  // Handle POST request to create a new news item
   async createNews(request, h) {
     try {
-      // Validasi data dengan Joi
+      // Validasi input sebelum diproses
       const { error } = validateCreateNews(request.payload);
       if (error) {
         throw new ValidationError(
@@ -61,13 +60,16 @@ class NewsHandler {
         );
       }
 
+      const { id: userId } = request.auth.credentials;
+      console.log('User ID from token:', userId);
+
       const { title, content } = request.payload;
       let imagePath = null;
 
       // Menangani file upload
       if (request.payload.image) {
-        const image = request.payload.image; // Ambil file gambar dari form data
-        const imageName = Date.now() + Path.extname(image.hapi.filename); // Membuat nama unik untuk gambar
+        const image = request.payload.image;
+        const imageName = Date.now() + Path.extname(image.hapi.filename);
         const imageDir = './src/uploads/newsImages/';
 
         // Pastikan direktori ada
@@ -75,26 +77,30 @@ class NewsHandler {
           fs.mkdirSync(imageDir, { recursive: true });
         }
 
-        // Simpan gambar ke disk
         const filePath = Path.join(imageDir, imageName);
         const fileStream = fs.createWriteStream(filePath);
         image.pipe(fileStream);
 
-        // Setelah gambar disimpan, simpan path ke database
+        fileStream.on('finish', () => console.log('Image saved successfully'));
+        fileStream.on('error', (err) =>
+          console.error('Error saving image:', err)
+        );
+
         imagePath = `/uploads/newsImages/${imageName}`;
       }
 
-      // Simpan berita ke database
-      const news = await this._service.createNews(title, content, imagePath);
+      // Simpan berita ke database dengan authorId dari token
+      const news = await this._service.createNews(
+        title,
+        content,
+        imagePath,
+        userId
+      );
       return h.response(news).code(201);
     } catch (error) {
+      console.error('Error in createNews:', error);
       if (error instanceof ValidationError) {
         return h.response({ message: error.message }).code(error.statusCode);
-      }
-      if (Boom.isBoom(error)) {
-        return h
-          .response({ message: error.output.payload.message })
-          .code(error.output.statusCode);
       }
       return h.response({ message: error.message }).code(500);
     }
@@ -167,29 +173,29 @@ class NewsHandler {
 
   async uploadImage(request, h) {
     try {
-      // Ambil file gambar dari form data
       const image = request.payload.image;
       if (!image) {
         throw new ClientError('No image uploaded');
       }
 
-      // Membuat nama unik untuk gambar
       const imageName = Date.now() + Path.extname(image.hapi.filename);
       const imageDir = './src/uploads/newsImages/';
+      const filePath = Path.join(imageDir, imageName);
 
-      // Pastikan direktori tempat menyimpan gambar sudah ada
       if (!fs.existsSync(imageDir)) {
         fs.mkdirSync(imageDir, { recursive: true });
       }
 
-      // Simpan gambar ke disk
-      const filePath = Path.join(imageDir, imageName);
-      const fileStream = fs.createWriteStream(filePath);
-      image.pipe(fileStream); // Pipe file ke file stream untuk disimpan
+      await new Promise((resolve, reject) => {
+        const fileStream = fs.createWriteStream(filePath);
+        image.pipe(fileStream);
+        fileStream.on('finish', resolve);
+        fileStream.on('error', reject);
+      });
 
-      const imagePath = `/uploads/newsImages/${imageName}`; // Path relatif gambar
-
-      return h.response({ imagePath }).code(200); // Mengembalikan path gambar yang sudah di-upload
+      return h
+        .response({ imagePath: `/uploads/newsImages/${imageName}` })
+        .code(200);
     } catch (error) {
       console.error('Error handling upload:', error);
       return h.response({ message: 'Internal Server Error' }).code(500);

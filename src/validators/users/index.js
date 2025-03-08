@@ -1,14 +1,14 @@
-const { registerSchema, loginSchema } = require('./schema');
-
-const validateRegister = (data) => {
-  return registerSchema.validate(data, { abortEarly: false });
+const InvariantError = require('../../exceptions/InvariantError');
+const { UserPayloadSchema } = require('./schema');
+ 
+const UsersValidator = {
+  validateUserPayload: (payload) => {
+    const validationResult = UserPayloadSchema.validate(payload);
+ 
+    if (validationResult.error) {
+      throw new InvariantError(validationResult.error.message);
+    }
+  },
 };
-
-const validateLogin = (data) => {
-  return loginSchema.validate(data, { abortEarly: false });
-};
-
-module.exports = {
-  validateRegister,
-  validateLogin,
-};
+ 
+module.exports = UsersValidator;
