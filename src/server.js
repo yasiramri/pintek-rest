@@ -25,6 +25,11 @@ const AuthenticationsService = require('./services/authenticationService');
 const TokenManager = require('./tokenize/TokenManager');
 const AuthenticationsValidator = require('./validators/auth');
 
+// struktur organisasi
+const strukturorganisasi = require('./api/strukturorganisasi');
+const StrukturOrganisasiService = require('./services/strukturOrganisasiService');
+const StrukturOrganisasiValidator = require('./validators/strukturOrganisasi');
+
 const prisma = new PrismaClient();
 
 const logger = winston.createLogger({
@@ -41,11 +46,11 @@ const logger = winston.createLogger({
   ],
 });
 
-
 const init = async () => {
   const newsService = new NewsService();
   const usersService = new UsersService();
   const authenticationsService = new AuthenticationsService();
+  const strukturOrganisasi = new StrukturOrganisasiService();
 
   const server = Hapi.server({
     port: process.env.PORT || 3000,
@@ -79,13 +84,6 @@ const init = async () => {
   // Mendaftarkan plugin
   await server.register([
     {
-      plugin: news,
-      options: {
-        service: newsService,
-        validator: NewsValidator,
-      },
-    },
-    {
       plugin: users,
       options: {
         service: usersService,
@@ -99,6 +97,20 @@ const init = async () => {
         usersService,
         tokenManager: TokenManager,
         validator: AuthenticationsValidator,
+      },
+    },
+    {
+      plugin: news,
+      options: {
+        service: newsService,
+        validator: NewsValidator,
+      },
+    },
+    {
+      plugin: strukturorganisasi,
+      options: {
+        service: strukturOrganisasi,
+        validator: StrukturOrganisasiValidator,
       },
     },
   ]);

@@ -1,24 +1,23 @@
 const ClientError = require('../../exceptions/ClientError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const ValidationError = require('../../exceptions/ValidationError');
-const {
-  validateCreateNews,
-  validateUpdateNews,
-} = require('../../validators/news');
 const fs = require('fs');
 const Path = require('path');
 const Boom = require('@hapi/boom');
+const {
+  validateStrukturOrganisasiPayload,
+} = require('../../validators/strukturOrganisasi');
 
-class NewsHandler {
+class StrukturOrganisasiHandler {
   constructor(service, validator) {
     this._service = service;
     this._validator = validator;
   }
 
-  async getAllNews(request, h) {
+  async getAllStrukturOrganisasi(request, h) {
     try {
-      const news = await this._service.getAllNews();
-      return h.response(news).code(200);
+      const strukturOrganisasi = await this._service.getAllStrukturOrganisasi();
+      return h.response(strukturOrganisasi).code(200);
     } catch (error) {
       if (error instanceof NotFoundError) {
         return h.response({ message: error.message }).code(error.statusCode);
@@ -27,50 +26,42 @@ class NewsHandler {
     }
   }
 
-  async getNewsById(request, h) {
+  async getStrukturOrganisasiById(request, h) {
     try {
       const { id } = request.params;
       if (!id) {
         throw new ClientError('ID parameter is required');
       }
 
-      const news = await this._service.getNewsById(id);
-      if (!news) {
-        throw new NotFoundError('News not found');
+      const struktur = await this._service.getStrukturOrganisasiById(id);
+      if (!struktur) {
+        throw new NotFoundError('Struktur Organisasi not found');
       }
-      return h.response(news).code(200);
+      return h.response(struktur).code(200);
     } catch (error) {
-      if (error instanceof ClientError) {
-        return h.response({ message: error.message }).code(error.statusCode);
-      }
-      if (error instanceof NotFoundError) {
+      if (error instanceof ClientError || error instanceof NotFoundError) {
         return h.response({ message: error.message }).code(error.statusCode);
       }
       return h.response({ message: error.message }).code(500);
     }
   }
 
-  async createNews(request, h) {
+  async createStrukturOrganisasi(request, h) {
     try {
-      // Validasi input sebelum diproses
-      const { error } = validateCreateNews(request.payload);
-      if (error) {
-        throw new ValidationError(
-          error.details.map((detail) => detail.message).join(', ')
-        );
-      }
+      // Validasi hanya untuk "nama" dan "jabatan"
+      validateStrukturOrganisasiPayload({
+        nama: request.payload.nama,
+        jabatan: request.payload.jabatan,
+      });
 
-      const { id: userId } = request.auth.credentials;
-      console.log('User ID from token:', userId);
+      const { nama, jabatan } = request.payload;
+      let profileImage = null;
 
-      const { title, content } = request.payload;
-      let imagePath = null;
-
-      // Menangani file upload
-      if (request.payload.image) {
-        const image = request.payload.image;
+      // Menangani file upload jika ada
+      if (request.payload.profileImage) {
+        const image = request.payload.profileImage;
         const imageName = Date.now() + Path.extname(image.hapi.filename);
-        const imageDir = './src/uploads/newsImages/';
+        const imageDir = './src/uploads/strukturOrganisasi/';
 
         // Pastikan direktori ada
         if (!fs.existsSync(imageDir)) {
@@ -81,46 +72,47 @@ class NewsHandler {
         const fileStream = fs.createWriteStream(filePath);
         image.pipe(fileStream);
 
-        fileStream.on('finish', () => console.log('Image saved successfully'));
+        fileStream.on('finish', () =>
+          console.log('Profile image saved successfully')
+        );
         fileStream.on('error', (err) =>
-          console.error('Error saving image:', err)
+          console.error('Error saving profile image:', err)
         );
 
-        imagePath = `/uploads/newsImages/${imageName}`;
+        profileImage = `/uploads/strukturOrganisasi/${imageName}`;
       }
 
-      // Simpan berita ke database dengan authorId dari token
-      const news = await this._service.createNews(
-        title,
-        content,
-        imagePath,
-        userId
+      // Simpan ke database
+      const struktur = await this._service.createStrukturOrganisasi(
+        nama,
+        jabatan,
+        profileImage
       );
-      return h.response(news).code(201);
+      return h.response(struktur).code(201);
     } catch (error) {
-      console.error('Error in createNews:', error);
+      console.error('Error in createStrukturOrganisasi:', error);
       if (error instanceof ValidationError) {
-        return h.response({ message: error.message }).code(error.statusCode);
+        return h.response({ message: error.message }).code(400);
       }
       return h.response({ message: error.message }).code(500);
     }
   }
 
-  async updateNews(request, h) {
+  async updateStrukturOrganisasi(request, h) {
     try {
       const { id } = request.params;
-      const { title, content } = request.payload;
+      const { nama, jabatan } = request.payload;
 
       if (!id) {
         throw new ClientError('ID parameter is required');
       }
 
       // Menangani upload file gambar jika ada
-      let imagePath = null;
-      if (request.payload.image) {
-        const image = request.payload.image;
+      let profileImage = null;
+      if (request.payload.profileImage) {
+        const image = request.payload.profileImage;
         const imageName = Date.now() + Path.extname(image.hapi.filename);
-        const imageDir = './src/uploads/newsImages/';
+        const imageDir = './src/uploads/strukturOrganisasi/';
 
         // Pastikan direktori ada
         if (!fs.existsSync(imageDir)) {
@@ -131,34 +123,28 @@ class NewsHandler {
         const fileStream = fs.createWriteStream(filePath);
         image.pipe(fileStream);
 
-        fileStream.on('finish', () => console.log('Image saved successfully'));
+        fileStream.on('finish', () =>
+          console.log('Profile image updated successfully')
+        );
         fileStream.on('error', (err) =>
-          console.error('Error saving image:', err)
+          console.error('Error saving profile image:', err)
         );
 
-        imagePath = `/uploads/newsImages/${imageName}`;
+        profileImage = `/uploads/strukturOrganisasi/${imageName}`;
       }
 
-      // Validasi input selain gambar
-      const { error } = validateUpdateNews({ title, content });
-      if (error) {
-        throw new ValidationError(
-          error.details.map((detail) => detail.message).join(', ')
-        );
-      }
-
-      // Update berita di database
-      const updatedNews = await this._service.updateNews(
+      // Update struktur organisasi di database
+      const updatedStruktur = await this._service.updateStrukturOrganisasi(
         id,
-        title,
-        content,
-        imagePath
+        nama,
+        jabatan,
+        profileImage
       );
-      if (!updatedNews) {
-        throw new NotFoundError('News not found');
+      if (!updatedStruktur) {
+        throw new NotFoundError('Struktur Organisasi not found');
       }
 
-      return h.response(updatedNews).code(200);
+      return h.response(updatedStruktur).code(200);
     } catch (error) {
       if (
         error instanceof ClientError ||
@@ -171,7 +157,7 @@ class NewsHandler {
     }
   }
 
-  async deleteNews(request, h) {
+  async deleteStrukturOrganisasi(request, h) {
     try {
       const { id } = request.params;
 
@@ -179,8 +165,8 @@ class NewsHandler {
         throw new ClientError('ID parameter is required');
       }
 
-      // Panggil service untuk menghapus berita (dan gambarnya jika ada)
-      const result = await this._service.deleteNews(id);
+      // Panggil service untuk menghapus struktur organisasi (dan gambarnya jika ada)
+      const result = await this._service.deleteStrukturOrganisasi(id);
 
       return h.response(result).code(200);
     } catch (error) {
@@ -191,7 +177,7 @@ class NewsHandler {
     }
   }
 
-  async uploadImage(request, h) {
+  async uploadProfileImage(request, h) {
     try {
       const image = request.payload.image;
       if (!image) {
@@ -199,7 +185,7 @@ class NewsHandler {
       }
 
       const imageName = Date.now() + Path.extname(image.hapi.filename);
-      const imageDir = './src/uploads/newsImages/';
+      const imageDir = './src/uploads/strukturOrganisasi/';
       const filePath = Path.join(imageDir, imageName);
 
       if (!fs.existsSync(imageDir)) {
@@ -214,7 +200,7 @@ class NewsHandler {
       });
 
       return h
-        .response({ imagePath: `/uploads/newsImages/${imageName}` })
+        .response({ profileImage: `/uploads/strukturOrganisasi/${imageName}` })
         .code(200);
     } catch (error) {
       console.error('Error handling upload:', error);
@@ -223,4 +209,4 @@ class NewsHandler {
   }
 }
 
-module.exports = NewsHandler;
+module.exports = StrukturOrganisasiHandler;

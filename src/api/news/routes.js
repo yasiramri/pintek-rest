@@ -12,11 +12,6 @@ const routes = (handler) => [
     handler: handler.getNewsById.bind(handler),
   },
   {
-    method: 'PUT',
-    path: '/news/{id}',
-    handler: handler.updateNews.bind(handler),
-  },
-  {
     method: 'DELETE',
     path: '/news/{id}',
     handler: handler.deleteNews.bind(handler),
@@ -58,6 +53,19 @@ const routes = (handler) => [
     },
     options: {
       auth: false, // Tidak memerlukan autentikasi untuk melihat gambar
+    },
+  },
+  {
+    method: 'PUT',
+    path: '/news/{id}',
+    options: {
+      payload: {
+        allow: 'multipart/form-data',
+        multipart: { output: 'stream' },
+        maxBytes: 10485760, // 10MB
+      },
+      handler: handler.updateNews.bind(handler),
+      auth: 'news_jwt',
     },
   },
 ];
