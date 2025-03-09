@@ -62,7 +62,7 @@ const routes = (handler) => [
       },
     },
     options: {
-      auth: false, // Tidak perlu autentikasi
+      auth: false,
     },
   },
 ];

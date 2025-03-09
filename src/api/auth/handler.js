@@ -19,34 +19,51 @@ class AuthenticationsHandler {
       console.log('Payload validated:', request.payload);
 
       const { identifier, password } = request.payload;
-      const user = await this._usersService.verifyUserCredentials(
-        identifier,
-        password
-      );
-      console.log('User found:', user);
 
-      const accessToken = this._tokenManager.generateAccessToken({
-        id: user.id,
-      });
-      const refreshToken = this._tokenManager.generateRefreshToken({
-        id: user.id,
-      });
-      console.log('Tokens generated:', { accessToken, refreshToken });
+      try {
+        const user = await this._usersService.verifyUserCredentials(
+          identifier,
+          password
+        );
+        console.log('User found:', user);
 
-      await this._authenticationsService.addRefreshToken(refreshToken);
-      console.log('Refresh token stored in DB');
+        const accessToken = this._tokenManager.generateAccessToken({
+          id: user.id,
+        });
+        const refreshToken = this._tokenManager.generateRefreshToken({
+          id: user.id,
+        });
+        console.log('Tokens generated:', { accessToken, refreshToken });
 
-      return h
-        .response({
-          status: 'success',
-          message: 'Authentication berhasil ditambahkan',
-          data: { accessToken, refreshToken },
-        })
-        .code(201);
+        await this._authenticationsService.addRefreshToken(refreshToken);
+        console.log('Refresh token stored in DB');
+
+        return h
+          .response({
+            status: 'success',
+            message: 'Authentication berhasil ditambahkan',
+            data: { accessToken, refreshToken },
+          })
+          .code(201);
+      } catch (error) {
+        if (error.message === 'Invalid credentials') {
+          return h
+            .response({
+              status: 'fail',
+              message: 'Incorrect username/email or password',
+            })
+            .code(401);
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error in postAuthenticationHandler:', error);
-      logger.error('Error in postAuthenticationHandler:', error);
-      throw error;
+      return h
+        .response({
+          status: 'error',
+          message: 'Internal server error',
+        })
+        .code(500);
     }
   }
 
