@@ -7,7 +7,12 @@ class NewsService {
   // Mengambil semua berita
   async getAllNews() {
     try {
-      const news = await prisma.news.findMany();
+      const news = await prisma.news.findMany({
+        include: {
+          category: true, // Menambahkan kategori saat mengambil data
+        },
+      });
+
       if (!news || news.length === 0) {
         throw new NotFoundError('No news found');
       }
@@ -22,6 +27,9 @@ class NewsService {
     try {
       const news = await prisma.news.findUnique({
         where: { id: parseInt(id) },
+        include: {
+          category: true,
+        },
       });
 
       if (!news) {
@@ -35,15 +43,20 @@ class NewsService {
   }
 
   // Menambahkan berita baru
-  async createNews(title, content, imagePath, userId) {
+  async createNews(title, content, imagePath, userId, categoryId, isFeatured) {
     try {
-      // Hapus validasi, karena validasi dilakukan di NewsHandler.js
+      // Membuat berita baru dengan kategori dan tag
       const news = await prisma.news.create({
         data: {
           title,
           content,
           imagePath,
-          authorId: userId, // Menggunakan user yang login
+          authorId: userId,
+          categoryId: parseInt(categoryId), // Menghubungkan dengan kategori
+          isFeatured: Boolean(isFeatured),
+        },
+        include: {
+          category: true, // Termasuk tag dan kategori pada hasil
         },
       });
 
@@ -54,14 +67,20 @@ class NewsService {
   }
 
   // Mengupdate berita berdasarkan ID
-  async updateNews(id, title, content, imagePath) {
+  async updateNews(id, title, content, imagePath, categoryId, isFeatured) {
     try {
+      // Update berita berdasarkan ID
       const news = await prisma.news.update({
         where: { id: parseInt(id) },
         data: {
           title,
           content,
           imagePath,
+          categoryId: parseInt(categoryId), // Menghubungkan dengan kategori baru
+          isFeatured,
+        },
+        include: {
+          category: true, // Termasuk tag dan kategori pada hasil
         },
       });
 
@@ -80,6 +99,9 @@ class NewsService {
     try {
       const news = await prisma.news.delete({
         where: { id: parseInt(id) },
+        include: {
+          category: true,
+        },
       });
 
       return news;

@@ -63,7 +63,7 @@ class NewsHandler {
       const { id: userId } = request.auth.credentials;
       console.log('User ID from token:', userId);
 
-      const { title, content } = request.payload;
+      const { title, content, categoryId, isFeatured } = request.payload;
       let imagePath = null;
 
       // Menangani file upload
@@ -89,12 +89,13 @@ class NewsHandler {
         imagePath = `/uploads/newsImages/${imageName}`;
       }
 
-      // Simpan berita ke database dengan authorId dari token
       const news = await this._service.createNews(
         title,
         content,
         imagePath,
-        userId
+        userId,
+        categoryId,
+        isFeatured
       );
       return h.response(news).code(201);
     } catch (error) {
@@ -109,7 +110,7 @@ class NewsHandler {
   async updateNews(request, h) {
     try {
       const { id } = request.params;
-      const { title, content } = request.payload;
+      const { title, content, categoryId, isFeatured } = request.payload;
 
       if (!id) {
         throw new ClientError('ID parameter is required');
@@ -140,19 +141,20 @@ class NewsHandler {
       }
 
       // Validasi input selain gambar
-      const { error } = validateUpdateNews({ title, content });
+      const { error } = updateNewsSchema({ title, content });
       if (error) {
         throw new ValidationError(
           error.details.map((detail) => detail.message).join(', ')
         );
       }
 
-      // Update berita di database
       const updatedNews = await this._service.updateNews(
         id,
         title,
         content,
-        imagePath
+        imagePath,
+        categoryId,
+        isFeatured
       );
       if (!updatedNews) {
         throw new NotFoundError('News not found');
