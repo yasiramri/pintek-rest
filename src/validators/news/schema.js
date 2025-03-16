@@ -21,6 +21,7 @@ const createNewsSchema = Joi.object({
   isFeatured: Joi.boolean().optional().default(false).messages({
     'boolean.base': 'isFeatured must be a boolean',
   }),
+
   image: Joi.any().meta({ swaggerType: 'file' }).optional().messages({
     'any.required': 'Image file is required',
   }),

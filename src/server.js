@@ -14,6 +14,11 @@ const news = require('./api/news');
 const NewsService = require('./services/newsService');
 const NewsValidator = require('./validators/news');
 
+// category
+const category = require('./api/category');
+const CategoryService = require('./services/categoryService');
+const CategoryValidator = require('./validators/category');
+
 // user
 const users = require('./api/users');
 const UsersService = require('./services/userService');
@@ -49,6 +54,7 @@ const logger = winston.createLogger({
 const init = async () => {
   const newsService = new NewsService();
   const usersService = new UsersService();
+  const categoryService = new CategoryService();
   const authenticationsService = new AuthenticationsService();
   const strukturOrganisasi = new StrukturOrganisasiService();
 
@@ -104,6 +110,13 @@ const init = async () => {
       options: {
         service: newsService,
         validator: NewsValidator,
+      },
+    },
+    {
+      plugin: category,
+      options: {
+        service: categoryService,
+        validator: CategoryValidator,
       },
     },
     {
