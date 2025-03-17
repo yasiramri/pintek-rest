@@ -69,32 +69,51 @@ class AuthenticationsHandler {
 
   async putAuthenticationHandler(request, h) {
     this._validator.validatePutAuthenticationPayload(request.payload);
-
     const { refreshToken } = request.payload;
+
     await this._authenticationsService.verifyRefreshToken(refreshToken);
     const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
 
+    // Hapus refresh token lama dan buat yang baru
+    await this._authenticationsService.deleteRefreshToken(refreshToken);
+    const newRefreshToken = this._tokenManager.generateRefreshToken({ id });
+    await this._authenticationsService.addRefreshToken(newRefreshToken);
+
     const accessToken = this._tokenManager.generateAccessToken({ id });
+
     return {
       status: 'success',
       message: 'Access Token berhasil diperbarui',
       data: {
         accessToken,
+        refreshToken: newRefreshToken,
       },
     };
   }
 
   async deleteAuthenticationHandler(request, h) {
-    this._validator.validateDeleteAuthenticationPayload(request.payload);
+    try {
+      this._validator.validateDeleteAuthentication(request.payload);
+      const { refreshToken } = request.payload;
 
-    const { refreshToken } = request.payload;
-    await this._authenticationsService.verifyRefreshToken(refreshToken);
-    await this._authenticationsService.deleteRefreshToken(refreshToken);
+      await this._authenticationsService.verifyRefreshToken(refreshToken);
+      await this._authenticationsService.deleteRefreshToken(refreshToken);
 
-    return {
-      status: 'success',
-      message: 'Refresh token berhasil dihapus',
-    };
+      return h
+        .response({
+          status: 'success',
+          message: 'Refresh token berhasil dihapus',
+        })
+        .code(200);
+    } catch (error) {
+      console.error('Error in deleteAuthenticationHandler:', error);
+      return h
+        .response({
+          status: 'fail',
+          message: error.message || 'Internal server error',
+        })
+        .code(error.message.includes('Refresh token tidak valid') ? 403 : 500);
+    }
   }
 }
 

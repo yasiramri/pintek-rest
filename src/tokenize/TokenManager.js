@@ -4,7 +4,9 @@ const TokenManager = {
   generateAccessToken: (payload) =>
     Jwt.token.generate(payload, process.env.ACCESS_TOKEN_SECRET),
   generateRefreshToken: (payload) =>
-    Jwt.token.generate(payload, process.env.REFRESH_TOKEN_SECRET),
+    Jwt.token.generate(payload, process.env.REFRESH_TOKEN_SECRET, {
+      ttlSec: process.env.REFRESH_TOKEN_AGE || 604800, // Default: 7 hari
+    }),
   verifyRefreshToken: (refreshToken) => {
     try {
       const artifacts = Jwt.token.decode(refreshToken);
