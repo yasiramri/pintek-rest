@@ -26,7 +26,7 @@ const routes = (handler) => [
         maxBytes: 10485760, // 10MB
       },
       handler: handler.createNews.bind(handler),
-      auth: 'news_jwt',
+      auth: 'token_jwt',
     },
   },
   {
@@ -39,7 +39,7 @@ const routes = (handler) => [
         maxBytes: 10485760,
       },
       handler: handler.uploadImage.bind(handler),
-      auth: 'news_jwt',
+      auth: 'token_jwt',
     },
   },
   {
@@ -65,7 +65,7 @@ const routes = (handler) => [
         maxBytes: 10485760, // 10MB
       },
       handler: handler.updateNews.bind(handler),
-      auth: 'news_jwt',
+      auth: 'token_jwt',
     },
   },
 ];

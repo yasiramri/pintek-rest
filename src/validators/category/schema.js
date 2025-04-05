@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 const createCategorySchema = Joi.object({
-  name: Joi.string().min(3).required().messages({
+  name: Joi.string().min(2).required().messages({
     'string.base': 'Category name must be a string',
     'string.min': 'Category name should have at least 3 characters',
     'any.required': 'Category name is required',

@@ -107,14 +107,15 @@ class StrukturOrganisasiHandler {
         throw new ClientError('ID parameter is required');
       }
 
-      // Menangani upload file gambar jika ada
+      // 🔧 Perbaikan di sini: default null
       let profileImage = null;
-      if (request.payload.profileImage) {
+
+      // ✅ Cek apakah user upload file baru
+      if (request.payload.profileImage && request.payload.profileImage._data) {
         const image = request.payload.profileImage;
         const imageName = Date.now() + Path.extname(image.hapi.filename);
         const imageDir = './src/uploads/strukturOrganisasi/';
 
-        // Pastikan direktori ada
         if (!fs.existsSync(imageDir)) {
           fs.mkdirSync(imageDir, { recursive: true });
         }
@@ -133,13 +134,14 @@ class StrukturOrganisasiHandler {
         profileImage = `/uploads/strukturOrganisasi/${imageName}`;
       }
 
-      // Update struktur organisasi di database
+      // ✅ Kirim ke service (image bisa null, dan akan diabaikan kalau null)
       const updatedStruktur = await this._service.updateStrukturOrganisasi(
         id,
         nama,
         jabatan,
         profileImage
       );
+
       if (!updatedStruktur) {
         throw new NotFoundError('Struktur Organisasi not found');
       }

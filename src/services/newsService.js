@@ -8,8 +8,11 @@ class NewsService {
   async getAllNews() {
     try {
       const news = await prisma.news.findMany({
+        where: {
+          isDeleted: false,
+        },
         include: {
-          category: true, // Menambahkan kategori saat mengambil data
+          category: true,
         },
       });
 
@@ -26,7 +29,10 @@ class NewsService {
   async getNewsById(id) {
     try {
       const news = await prisma.news.findUnique({
-        where: { id: parseInt(id) },
+        where: {
+          id: parseInt(id),
+          isDeleted: false,
+        },
         include: {
           category: true,
         },
@@ -53,7 +59,7 @@ class NewsService {
           imagePath,
           authorId: userId,
           categoryId: parseInt(categoryId), // Menghubungkan dengan kategori
-          isFeatured: Boolean(isFeatured),
+          isFeatured: isFeatured === 'true',
         },
         include: {
           category: true, // Termasuk tag dan kategori pada hasil
@@ -97,8 +103,11 @@ class NewsService {
   // Menghapus berita berdasarkan ID
   async deleteNews(id) {
     try {
-      const news = await prisma.news.delete({
+      const news = await prisma.news.update({
         where: { id: parseInt(id) },
+        data: {
+          isDeleted: true,
+        },
         include: {
           category: true,
         },

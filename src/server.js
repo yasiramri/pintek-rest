@@ -71,13 +71,13 @@ const init = async () => {
   await server.register([Inert, Jwt]);
 
   // Konfigurasi autentikasi JWT
-  server.auth.strategy('news_jwt', 'jwt', {
+  server.auth.strategy('token_jwt', 'jwt', {
     keys: process.env.ACCESS_TOKEN_SECRET,
     verify: {
       aud: false,
       iss: false,
       sub: false,
-      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
+      maxAgeSec: parseInt(process.env.ACCESS_TOKEN_AGE),
     },
     validate: (artifacts) => ({
       isValid: true,

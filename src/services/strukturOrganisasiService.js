@@ -59,19 +59,23 @@ class StrukturOrganisasiService {
   // 🔹 Perbarui data berdasarkan ID
   async updateStrukturOrganisasi(id, nama, jabatan, profileImage) {
     try {
+      const updateData = {
+        nama,
+        jabatan,
+      };
+
+      if (profileImage) {
+        updateData.profileImage = profileImage;
+      }
+
       const struktur = await prisma.strukturOrganisasi.update({
         where: { id: parseInt(id) },
-        data: {
-          nama,
-          jabatan,
-          profileImage,
-        },
+        data: updateData,
       });
 
       return struktur;
     } catch (error) {
       if (error.code === 'P2025') {
-        // Kode error Prisma jika data tidak ditemukan
         throw new NotFoundError('Struktur Organisasi not found');
       }
       throw error;

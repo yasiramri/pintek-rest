@@ -68,27 +68,42 @@ class AuthenticationsHandler {
   }
 
   async putAuthenticationHandler(request, h) {
-    this._validator.validatePutAuthenticationPayload(request.payload);
-    const { refreshToken } = request.payload;
+    try {
+      // ✅ Validasi payload
+      this._validator.validatePutAuthentication(request.payload);
+      const { refreshToken } = request.payload;
 
-    await this._authenticationsService.verifyRefreshToken(refreshToken);
-    const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
+      // ✅ Verifikasi token tersimpan di DB
+      await this._authenticationsService.verifyRefreshToken(refreshToken);
 
-    // Hapus refresh token lama dan buat yang baru
-    await this._authenticationsService.deleteRefreshToken(refreshToken);
-    const newRefreshToken = this._tokenManager.generateRefreshToken({ id });
-    await this._authenticationsService.addRefreshToken(newRefreshToken);
+      // ✅ Verifikasi isi token dan signature
+      const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
 
-    const accessToken = this._tokenManager.generateAccessToken({ id });
+      // ✅ Buat access token baru (TANPA mengganti refresh token)
+      const accessToken = this._tokenManager.generateAccessToken({ id });
 
-    return {
-      status: 'success',
-      message: 'Access Token berhasil diperbarui',
-      data: {
-        accessToken,
-        refreshToken: newRefreshToken,
-      },
-    };
+      console.log('[putAuthenticationHandler] Akses token baru:', accessToken);
+
+      // ✅ Kembalikan hanya accessToken (refreshToken tetap sama)
+      return h
+        .response({
+          status: 'success',
+          message: 'Access token berhasil diperbarui',
+          data: {
+            accessToken,
+          },
+        })
+        .code(200);
+    } catch (error) {
+      console.error('[putAuthenticationHandler] ERROR:', error.message);
+
+      return h
+        .response({
+          status: 'fail',
+          message: error.message,
+        })
+        .code(error.message.includes('Refresh token') ? 403 : 500);
+    }
   }
 
   async deleteAuthenticationHandler(request, h) {

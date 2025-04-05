@@ -15,6 +15,7 @@ const routes = (handler) => [
     method: 'POST',
     path: '/struktur-organisasi',
     options: {
+      auth: 'token_jwt',
       payload: {
         allow: 'multipart/form-data',
         multipart: { output: 'stream' },
@@ -27,6 +28,7 @@ const routes = (handler) => [
     method: 'PUT',
     path: '/struktur-organisasi/{id}',
     options: {
+      auth: 'token_jwt',
       payload: {
         allow: 'multipart/form-data',
         multipart: { output: 'stream' },
@@ -44,6 +46,7 @@ const routes = (handler) => [
     method: 'POST',
     path: '/struktur-organisasi/upload',
     options: {
+      auth: 'token_jwt',
       payload: {
         allow: 'multipart/form-data',
         multipart: { output: 'stream' },

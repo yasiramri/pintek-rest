@@ -13,7 +13,7 @@ const routes = (handler) => [
     method: 'POST',
     path: '/categories',
     options: {
-      auth: 'news_jwt',
+      auth: 'token_jwt',
     },
     handler: handler.createCategory.bind(handler),
   },
@@ -21,7 +21,7 @@ const routes = (handler) => [
     method: 'PUT',
     path: '/categories/{id}',
     options: {
-      auth: 'news_jwt',
+      auth: 'token_jwt',
     },
     handler: handler.updateCategory.bind(handler),
   },
@@ -29,7 +29,7 @@ const routes = (handler) => [
     method: 'DELETE',
     path: '/categories/{id}',
     options: {
-      auth: 'news_jwt',
+      auth: 'token_jwt',
     },
     handler: handler.deleteCategory.bind(handler),
   },
