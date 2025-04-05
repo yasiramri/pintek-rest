@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "generate:main": "npx prisma generate --schema=./prisma/main_db.prisma"
+    "generate:main": "npx prisma generate --schema=./prisma/main_db.prisma",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
