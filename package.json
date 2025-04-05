@@ -4,9 +4,12 @@
   "main": "src/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js",
     "generate:main": "npx prisma generate --schema=./prisma/main_db.prisma",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "migrate": "prisma migrate deploy",
+    "db:push": "prisma db push"
   },
   "keywords": [],
   "author": "",
