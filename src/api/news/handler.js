@@ -110,14 +110,23 @@ class NewsHandler {
   async updateNews(request, h) {
     try {
       const { id } = request.params;
-      const { title, content, categoryId, isFeatured } = request.payload;
-
+      let { title, content, categoryId, isFeatured } = request.payload;
+      isFeatured = isFeatured === 'true';
       if (!id) {
         throw new ClientError('ID parameter is required');
       }
 
+      // Validasi input (selain gambar)
+      const { error } = validateUpdateNews({ title, content });
+      if (error) {
+        throw new ValidationError(
+          error.details.map((detail) => detail.message).join(', ')
+        );
+      }
+
       // Menangani upload file gambar jika ada
       let imagePath = null;
+
       if (request.payload.image) {
         const image = request.payload.image;
         const imageName = Date.now() + Path.extname(image.hapi.filename);
@@ -129,33 +138,28 @@ class NewsHandler {
         }
 
         const filePath = Path.join(imageDir, imageName);
-        const fileStream = fs.createWriteStream(filePath);
-        image.pipe(fileStream);
 
-        fileStream.on('finish', () => console.log('Image saved successfully'));
-        fileStream.on('error', (err) =>
-          console.error('Error saving image:', err)
-        );
+        // Tunggu sampai file selesai di-upload sebelum lanjut
+        await new Promise((resolve, reject) => {
+          const fileStream = fs.createWriteStream(filePath);
+          image.pipe(fileStream);
+          fileStream.on('finish', resolve);
+          fileStream.on('error', reject);
+        });
 
         imagePath = `/uploads/newsImages/${imageName}`;
       }
 
-      // Validasi input selain gambar
-      const { error } = updateNewsSchema({ title, content });
-      if (error) {
-        throw new ValidationError(
-          error.details.map((detail) => detail.message).join(', ')
-        );
-      }
-
+      // Panggil service untuk update berita
       const updatedNews = await this._service.updateNews(
         id,
         title,
         content,
-        imagePath,
+        imagePath, // bisa null kalau tidak ada file baru
         categoryId,
         isFeatured
       );
+
       if (!updatedNews) {
         throw new NotFoundError('News not found');
       }
@@ -169,7 +173,9 @@ class NewsHandler {
       ) {
         return h.response({ message: error.message }).code(error.statusCode);
       }
-      return h.response({ message: error.message }).code(500);
+
+      console.error('Error in updateNews:', error);
+      return h.response({ message: 'Internal Server Error' }).code(500);
     }
   }
 
