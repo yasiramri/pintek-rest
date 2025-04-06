@@ -128,6 +128,13 @@ class NewsHandler {
       let imagePath = null;
 
       if (request.payload.image) {
+        // Proses upload file seperti biasa...
+        // (sudah kamu tulis dengan fs.createWriteStream, dll)
+      } else if (request.payload.imagePath) {
+        imagePath = request.payload.imagePath; // fallback dari frontend
+      }
+
+      if (request.payload.image) {
         const image = request.payload.image;
         const imageName = Date.now() + Path.extname(image.hapi.filename);
         const imageDir = './src/uploads/newsImages/';

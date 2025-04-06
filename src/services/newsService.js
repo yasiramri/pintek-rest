@@ -75,25 +75,32 @@ class NewsService {
   // Mengupdate berita berdasarkan ID
   async updateNews(id, title, content, imagePath, categoryId, isFeatured) {
     try {
-      // Update berita berdasarkan ID
+      // Siapkan objek data untuk update
+      const updateData = {
+        title,
+        content,
+        categoryId: parseInt(categoryId),
+        isFeatured,
+      };
+
+      // Hanya tambahkan imagePath jika tidak null (artinya user upload atau kirim path lama)
+      if (typeof imagePath === 'string' && imagePath.trim() !== '') {
+        updateData.imagePath = imagePath; // catatan: pakai 'imagePath' bukan 'image_path' karena Prisma case-sensitive terhadap schema
+      }
+
+      // Lakukan update ke database
       const news = await prisma.news.update({
         where: { id: parseInt(id) },
-        data: {
-          title,
-          content,
-          imagePath,
-          categoryId: parseInt(categoryId), // Menghubungkan dengan kategori baru
-          isFeatured,
-        },
+        data: updateData,
         include: {
-          category: true, // Termasuk tag dan kategori pada hasil
+          category: true,
         },
       });
 
       return news;
     } catch (error) {
       if (error.code === 'P2025') {
-        // Kode error Prisma jika data tidak ditemukan
+        // Prisma error code jika data tidak ditemukan
         throw new NotFoundError('News not found');
       }
       throw error;
