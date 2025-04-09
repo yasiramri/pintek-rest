@@ -129,14 +129,14 @@ const init = async () => {
   ]);
 
   // Middleware Rate Limiting
-  await server.register({
-    plugin: HapiRateLimit,
-    options: {
-      userLimit: 500, // Maksimal 500 request per IP per jam
-      pathLimit: 200, // Maksimal 200 request per endpoint per jam
-      headers: true, // Berikan informasi batas ke pengguna
-    },
-  });
+  // await server.register({
+  //   plugin: HapiRateLimit,
+  //   options: {
+  //     userLimit: 500, // Maksimal 500 request per IP per jam
+  //     pathLimit: 200, // Maksimal 200 request per endpoint per jam
+  //     headers: true, // Berikan informasi batas ke pengguna
+  //   },
+  // });
 
   await server.start();
   console.log('Server running on %s', server.info.uri);
