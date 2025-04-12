@@ -34,6 +34,7 @@ class NewsService {
           isDeleted: false,
         },
         include: {
+          author: true,
           category: true,
         },
       });
