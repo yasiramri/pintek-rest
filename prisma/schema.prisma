@@ -9,18 +9,20 @@ datasource db {
 }
 
 model News {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   title      String
   content    String
-  authorId   Int
-  author     User     @relation(fields: [authorId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
   imagePath  String?
-  isFeatured Boolean  @default(false)
+  authorId   Int
   categoryId Int
-  category   Category @relation(fields: [categoryId], references: [id])
-  isDeleted  Boolean  @default(false)
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  isFeatured Boolean
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id])
+  author   User     @relation(fields: [authorId], references: [id])
 }
 
 model User {

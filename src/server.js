@@ -1,4 +1,4 @@
-require('dotenv').config(); // Memastikan env variabel tersedia
+require('dotenv-safe').config(); // Memastikan env variabel tersedia
 const Hapi = require('@hapi/hapi');
 const Inert = require('@hapi/inert');
 const Jwt = require('@hapi/jwt');
@@ -35,6 +35,10 @@ const strukturorganisasi = require('./api/strukturorganisasi');
 const StrukturOrganisasiService = require('./services/strukturOrganisasiService');
 const StrukturOrganisasiValidator = require('./validators/strukturOrganisasi');
 
+// Archive
+const archive = require('./api/archieve');
+const ArchiveService = require('./services/archiveService');
+
 const prisma = new PrismaClient();
 
 const logger = winston.createLogger({
@@ -57,6 +61,7 @@ const init = async () => {
   const categoryService = new CategoryService();
   const authenticationsService = new AuthenticationsService();
   const strukturOrganisasi = new StrukturOrganisasiService();
+  const archiveService = new ArchiveService();
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -126,17 +131,23 @@ const init = async () => {
         validator: StrukturOrganisasiValidator,
       },
     },
+    {
+      plugin: archive,
+      options: {
+        service: archiveService,
+      },
+    },
   ]);
 
   // Middleware Rate Limiting
-  // await server.register({
-  //   plugin: HapiRateLimit,
-  //   options: {
-  //     userLimit: 500, // Maksimal 500 request per IP per jam
-  //     pathLimit: 200, // Maksimal 200 request per endpoint per jam
-  //     headers: true, // Berikan informasi batas ke pengguna
-  //   },
-  // });
+  await server.register({
+    plugin: HapiRateLimit,
+    options: {
+      userLimit: 500, // Maksimal 500 request per IP per jam
+      pathLimit: 200, // Maksimal 200 request per endpoint per jam
+      headers: true, // Berikan informasi batas ke pengguna
+    },
+  });
 
   await server.start();
   console.log('Server running on %s', server.info.uri);
