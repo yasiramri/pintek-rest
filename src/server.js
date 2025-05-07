@@ -1,4 +1,4 @@
-require('dotenv-safe').config(); // Memastikan env variabel tersedia
+require('dotenv').config(); // Memastikan env variabel tersedia
 const Hapi = require('@hapi/hapi');
 const Inert = require('@hapi/inert');
 const Jwt = require('@hapi/jwt');
@@ -35,7 +35,7 @@ const strukturorganisasi = require('./api/strukturorganisasi');
 const StrukturOrganisasiService = require('./services/strukturOrganisasiService');
 const StrukturOrganisasiValidator = require('./validators/strukturOrganisasi');
 
-// Archive
+//Archive
 const archive = require('./api/archieve');
 const ArchiveService = require('./services/archiveService');
 
