@@ -35,6 +35,10 @@ const strukturorganisasi = require('./api/strukturorganisasi');
 const StrukturOrganisasiService = require('./services/strukturOrganisasiService');
 const StrukturOrganisasiValidator = require('./validators/strukturOrganisasi');
 
+// archive
+const archive = require('./api/archieve');
+const ArchiveService = require('./services/archiveService');
+
 const prisma = new PrismaClient();
 
 const logger = winston.createLogger({
@@ -57,6 +61,7 @@ const init = async () => {
   const categoryService = new CategoryService();
   const authenticationsService = new AuthenticationsService();
   const strukturOrganisasi = new StrukturOrganisasiService();
+  const archiveService = new ArchiveService();
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -124,6 +129,12 @@ const init = async () => {
       options: {
         service: strukturOrganisasi,
         validator: StrukturOrganisasiValidator,
+      },
+    },
+    {
+      plugin: archive,
+      options: {
+        service: archiveService,
       },
     },
   ]);
